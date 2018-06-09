@@ -4,10 +4,14 @@ const { matchedData } = require('express-validator/filter');
 module.exports = app => {
     const Tasks = app.db.models.Tasks;
     app.route('/tasks')
+        .all(app.auth.authenticate())
       .get(async (req, res) => {
           try {
-            const tasks = await Tasks.findAll();
-
+            const tasks = await Tasks.findAll({
+                where: {
+                    user_id: req.user.id
+                }
+            });
             res.json(tasks);
           } catch (error) {
             console.log(error);
@@ -25,7 +29,11 @@ module.exports = app => {
             if (!errors.isEmpty()){
                 return res.status(400).json({ errors: errors.array() });
             }
-            const task = await Tasks.create(matchedData(req));
+
+            let task = matchedData(req);
+            task.user_id = req.user.id;
+
+            task = await Tasks.create(task);
             res.status(201).json(task);
           } catch (error) {
             console.log(error);
@@ -35,6 +43,7 @@ module.exports = app => {
       });
 
     app.route('/tasks/:id')
+        .all(app.auth.authenticate())
       .get([
             param('id', 'Not an integer').isInt()
           ], async (req, res) => {
@@ -43,7 +52,12 @@ module.exports = app => {
               if (!errors.isEmpty()){
                   return res.status(400).json({ errors: errors.array() });
               }
-              const task = await Tasks.findById(req.params.id);
+              const task = await Tasks.findByOne({
+                  where: {
+                    id: req.user.id,
+                    user_id: req.user.id
+                  }
+              });
 
               if(task) {
                   res.json(task);
@@ -70,7 +84,8 @@ module.exports = app => {
                 }
                 await Tasks.update(matchedData(req), {
                     where: {
-                        id: req.params.id
+                        id: req.params.id,
+                        user_id: req.user.id
                     }
                 });
                 res.sendStatus(204);
@@ -90,7 +105,8 @@ module.exports = app => {
                 }
                 await Tasks.destroy({
                     where: {
-                        id: req.params.id
+                        id: req.params.id,
+                        user_id: req.user.id
                     }
                 });
                 res.sendStatus(204);

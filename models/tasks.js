@@ -19,5 +19,8 @@ module.exports = (sequelize, DataType) => {
       }
   });
 
+    Tasks.associate = model => {
+        Tasks.belongsTo(model.Users);
+    };
     return Tasks;
 };
